@@ -83,8 +83,8 @@ fun TaskScreen(viewModel: TaskViewModel) {
 
     if (showDialog) {
         AddTaskDialog(
-            onConfirm = { title ->
-                viewModel.addTask(title)
+            onConfirm = { title, description ->
+                viewModel.addTask(title, description)
                 showDialog = false
             },
             onDismiss = { showDialog = false }
@@ -121,8 +121,9 @@ private fun TaskItem(task: Task, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun AddTaskDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by remember { mutableStateOf("") }
+private fun AddTaskDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -135,10 +136,18 @@ private fun AddTaskDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.titleMedium
                 )
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
+                    value = title,
+                    onValueChange = { title = it },
                     label = { Text(stringResource(R.string.task_title)) },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text(stringResource(R.string.task_description)) },
+                    minLines = 2,
+                    maxLines = 4,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(
@@ -148,7 +157,10 @@ private fun AddTaskDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
                     TextButton(onClick = onDismiss) {
                         Text(stringResource(R.string.cancel))
                     }
-                    TextButton(onClick = { onConfirm(text); text = "" }, enabled = text.isNotBlank()) {
+                    TextButton(
+                        onClick = { onConfirm(title, description); title = ""; description = "" },
+                        enabled = title.isNotBlank()
+                    ) {
                         Text(stringResource(R.string.add))
                     }
                 }
