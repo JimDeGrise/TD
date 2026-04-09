@@ -21,10 +21,10 @@ class TaskViewModel(
     val tasks: StateFlow<List<Task>> = getTasksUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addTask(title: String) {
+    fun addTask(title: String, description: String = "") {
         if (title.isBlank()) return
         viewModelScope.launch {
-            addTaskUseCase(Task(title = title.trim()))
+            addTaskUseCase(Task(title = title.trim(), description = description.trim()))
         }
     }
 
