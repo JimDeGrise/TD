@@ -5,19 +5,24 @@ import com.example.td.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
 class AddTaskUseCaseTest {
 
-    private val addedTasks = mutableListOf<Task>()
+    private lateinit var addedTasks: MutableList<Task>
+    private lateinit var useCase: AddTaskUseCase
 
-    private val fakeRepository = object : TaskRepository {
-        override fun getTasks(): Flow<List<Task>> = error("not used")
-        override suspend fun addTask(task: Task) { addedTasks.add(task) }
-        override suspend fun deleteTask(task: Task) = Unit
+    @Before
+    fun setUp() {
+        addedTasks = mutableListOf()
+        val fakeRepository = object : TaskRepository {
+            override fun getTasks(): Flow<List<Task>> = error("not used")
+            override suspend fun addTask(task: Task) { addedTasks.add(task) }
+            override suspend fun deleteTask(task: Task) = Unit
+        }
+        useCase = AddTaskUseCase(fakeRepository)
     }
-
-    private val useCase = AddTaskUseCase(fakeRepository)
 
     @Test
     fun `invoke delegates to repository with the given task`() = runTest {
