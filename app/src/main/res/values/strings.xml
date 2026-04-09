@@ -8,4 +8,7 @@
     <string name="task_description">Описание (необязательно)</string>
     <string name="cancel">Отмена</string>
     <string name="add">Добавить</string>
+    <string name="close">Закрыть</string>
+    <string name="no_description">Описание не задано.</string>
+    <string name="view_description">Просмотреть описание</string>
 </resources>
