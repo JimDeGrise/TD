@@ -148,7 +148,7 @@ private fun AddTaskDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
                     TextButton(onClick = onDismiss) {
                         Text(stringResource(R.string.cancel))
                     }
-                    TextButton(onClick = { onConfirm(text) }, enabled = text.isNotBlank()) {
+                    TextButton(onClick = { onConfirm(text); text = "" }, enabled = text.isNotBlank()) {
                         Text(stringResource(R.string.add))
                     }
                 }
