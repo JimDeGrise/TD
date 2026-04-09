@@ -4,44 +4,34 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.td.data.local.database.AppDatabase
+import com.example.td.data.repository.TaskRepositoryImpl
+import com.example.td.domain.usecase.AddTaskUseCase
+import com.example.td.domain.usecase.DeleteTaskUseCase
+import com.example.td.domain.usecase.GetTasksUseCase
+import com.example.td.ui.task.TaskScreen
+import com.example.td.ui.task.TaskViewModel
 import com.example.td.ui.theme.TDTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val db = AppDatabase.getInstance(applicationContext)
+        val repository = TaskRepositoryImpl(db.taskDao())
+        val factory = TaskViewModel.Factory(
+            GetTasksUseCase(repository),
+            AddTaskUseCase(repository),
+            DeleteTaskUseCase(repository)
+        )
+
         setContent {
             TDTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                val taskViewModel: TaskViewModel = viewModel(factory = factory)
+                TaskScreen(viewModel = taskViewModel)
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    TDTheme {
-        Greeting("Android")
     }
 }
