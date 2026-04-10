@@ -22,16 +22,20 @@ import kotlinx.coroutines.delay
 
 private val SplashBackground = Color(0xFF0D1B4E)
 
+private const val INITIAL_DELAY_MS = 400L
+private const val DASH_DELAY_MS = 500L
+private const val DO_DELAY_MS = 700L
+
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
     var step by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
-        delay(400L)
+        delay(INITIAL_DELAY_MS)
         step = 1
-        delay(500L)
+        delay(DASH_DELAY_MS)
         step = 2
-        delay(700L)
+        delay(DO_DELAY_MS)
         onFinished()
     }
 

@@ -63,6 +63,8 @@ private val taskCardColors = listOf(
     Color(0xFFFCE4EC)  // rose
 )
 
+private val StarGold = Color(0xFFFFC107)
+
 private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
 
 private fun formatTimestamp(millis: Long): String = dateFormat.format(Date(millis))
@@ -265,7 +267,7 @@ private fun TaskItem(
                 Icon(
                     imageVector = Icons.Default.Star,
                     contentDescription = stringResource(R.string.starred_task),
-                    tint = Color(0xFFFFC107),
+                    tint = StarGold,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(8.dp)
@@ -284,6 +286,12 @@ private fun TaskDetailDialog(
     var isEditing by rememberSaveable { mutableStateOf(false) }
     var editTitle by rememberSaveable { mutableStateOf(task.title) }
     var editDescription by rememberSaveable { mutableStateOf(task.description) }
+
+    fun resetEditState() {
+        isEditing = false
+        editTitle = task.title
+        editDescription = task.description
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -365,7 +373,7 @@ private fun TaskDetailDialog(
         },
         dismissButton = {
             if (isEditing) {
-                TextButton(onClick = { isEditing = false; editTitle = task.title; editDescription = task.description }) {
+                TextButton(onClick = { resetEditState() }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
