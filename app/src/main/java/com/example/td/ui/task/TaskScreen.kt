@@ -113,7 +113,7 @@ fun TaskScreen(viewModel: TaskViewModel) {
                     onDelete = null,
                     onTaskClick = { selectedTask = it }
                 )
-                else -> TaskList(
+                1 -> TaskList(
                     tasks = completedTasks,
                     listState = completedListState,
                     emptyText = stringResource(R.string.no_completed_tasks),
@@ -176,8 +176,8 @@ private fun TaskList(
                 TaskItem(
                     task = task,
                     cardColor = taskCardColors[index % taskCardColors.size],
-                    onDelete = if (onDelete != null) ({ onDelete(task) }) else null,
-                    onLongClick = if (onLongClick != null) ({ onLongClick(task) }) else null,
+                    onDelete = onDelete?.let { { it(task) } },
+                    onLongClick = onLongClick?.let { { it(task) } },
                     onClick = { onTaskClick(task) }
                 )
             }
