@@ -18,4 +18,6 @@
     <string name="created_at">Создано: %s</string>
     <string name="completed_at">Завершено: %s</string>
     <string name="mark_as_done">Отметить как выполненную</string>
+    <string name="tab_active">Активные</string>
+    <string name="tab_completed">Завершённые</string>
 </resources>
