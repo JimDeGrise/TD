@@ -3,6 +3,7 @@ package com.example.td.ui.task
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,6 +115,7 @@ fun TaskScreen(viewModel: TaskViewModel) {
                     emptyText = stringResource(R.string.no_active_tasks),
                     onLongClick = { viewModel.completeTask(it) },
                     onDelete = null,
+                    onDoubleTap = { viewModel.toggleStar(it) },
                     onTaskClick = { selectedTask = it }
                 )
                 1 -> TaskList(
@@ -119,6 +124,7 @@ fun TaskScreen(viewModel: TaskViewModel) {
                     emptyText = stringResource(R.string.no_completed_tasks),
                     onLongClick = null,
                     onDelete = { viewModel.deleteTask(it) },
+                    onDoubleTap = { viewModel.toggleStar(it) },
                     onTaskClick = { selectedTask = it }
                 )
             }
@@ -136,7 +142,14 @@ fun TaskScreen(viewModel: TaskViewModel) {
     }
 
     selectedTask?.let { task ->
-        TaskDetailDialog(task = task, onDismiss = { selectedTask = null })
+        TaskDetailDialog(
+            task = task,
+            onDismiss = { selectedTask = null },
+            onSave = { updatedTask ->
+                viewModel.updateTask(updatedTask)
+                selectedTask = null
+            }
+        )
     }
 }
 
@@ -147,6 +160,7 @@ private fun TaskList(
     emptyText: String,
     onLongClick: ((Task) -> Unit)?,
     onDelete: ((Task) -> Unit)?,
+    onDoubleTap: ((Task) -> Unit)?,
     onTaskClick: (Task) -> Unit
 ) {
     if (tasks.isEmpty()) {
@@ -178,6 +192,7 @@ private fun TaskList(
                     cardColor = taskCardColors[index % taskCardColors.size],
                     onDelete = onDelete?.let { { it(task) } },
                     onLongClick = onLongClick?.let { { it(task) } },
+                    onDoubleTap = onDoubleTap?.let { { it(task) } },
                     onClick = { onTaskClick(task) }
                 )
             }
@@ -192,6 +207,7 @@ private fun TaskItem(
     cardColor: Color,
     onDelete: (() -> Unit)?,
     onLongClick: (() -> Unit)?,
+    onDoubleTap: (() -> Unit)?,
     onClick: () -> Unit
 ) {
     Card(
@@ -202,61 +218,121 @@ private fun TaskItem(
                 role = Role.Button,
                 onClick = onClick,
                 onLongClickLabel = if (onLongClick != null) stringResource(R.string.mark_as_done) else null,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onDoubleClick = onDoubleTap
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                    )
-                )
-                Text(
-                    text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                task.completedAt?.let { completedAt ->
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.completed_at, formatTimestamp(completedAt)),
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        )
+                    )
+                    Text(
+                        text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    task.completedAt?.let { completedAt ->
+                        Text(
+                            text = stringResource(R.string.completed_at, formatTimestamp(completedAt)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (onDelete != null) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_task)
+                        )
+                    }
                 }
             }
-            if (onDelete != null) {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.delete_task)
-                    )
-                }
+            if (task.isStarred) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = stringResource(R.string.starred_task),
+                    tint = Color(0xFFFFC107),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun TaskDetailDialog(task: Task, onDismiss: () -> Unit) {
+private fun TaskDetailDialog(
+    task: Task,
+    onDismiss: () -> Unit,
+    onSave: (Task) -> Unit
+) {
+    var isEditing by rememberSaveable { mutableStateOf(false) }
+    var editTitle by rememberSaveable { mutableStateOf(task.title) }
+    var editDescription by rememberSaveable { mutableStateOf(task.description) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(task.title) },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (isEditing) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text(stringResource(R.string.task_title)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { isEditing = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.edit_task)
+                        )
+                    }
+                }
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = if (task.description.isNotBlank()) task.description
-                           else stringResource(R.string.no_description)
-                )
+                if (isEditing) {
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text(stringResource(R.string.task_description)) },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text(
+                        text = if (task.description.isNotBlank()) task.description
+                               else stringResource(R.string.no_description)
+                    )
+                }
                 Text(
                     text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
                     style = MaterialTheme.typography.labelSmall,
@@ -272,8 +348,26 @@ private fun TaskDetailDialog(task: Task, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.close))
+            if (isEditing) {
+                TextButton(
+                    onClick = {
+                        onSave(task.copy(title = editTitle.trim(), description = editDescription.trim()))
+                    },
+                    enabled = editTitle.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        },
+        dismissButton = {
+            if (isEditing) {
+                TextButton(onClick = { isEditing = false; editTitle = task.title; editDescription = task.description }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         }
     )

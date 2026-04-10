@@ -8,6 +8,7 @@ import com.example.td.domain.usecase.AddTaskUseCase
 import com.example.td.domain.usecase.CompleteTaskUseCase
 import com.example.td.domain.usecase.DeleteTaskUseCase
 import com.example.td.domain.usecase.GetTasksUseCase
+import com.example.td.domain.usecase.UpdateTaskUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ class TaskViewModel(
     private val getTasksUseCase: GetTasksUseCase,
     private val addTaskUseCase: AddTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
-    private val completeTaskUseCase: CompleteTaskUseCase
+    private val completeTaskUseCase: CompleteTaskUseCase,
+    private val updateTaskUseCase: UpdateTaskUseCase
 ) : ViewModel() {
 
     private val allTasks: StateFlow<List<Task>> = getTasksUseCase()
@@ -61,14 +63,28 @@ class TaskViewModel(
         }
     }
 
+    fun updateTask(task: Task) {
+        viewModelScope.launch {
+            updateTaskUseCase(task)
+        }
+    }
+
+    fun toggleStar(task: Task) {
+        viewModelScope.launch {
+            updateTaskUseCase(task.copy(isStarred = !task.isStarred))
+        }
+    }
+
     class Factory(
         private val getTasksUseCase: GetTasksUseCase,
         private val addTaskUseCase: AddTaskUseCase,
         private val deleteTaskUseCase: DeleteTaskUseCase,
-        private val completeTaskUseCase: CompleteTaskUseCase
+        private val completeTaskUseCase: CompleteTaskUseCase,
+        private val updateTaskUseCase: UpdateTaskUseCase
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            TaskViewModel(getTasksUseCase, addTaskUseCase, deleteTaskUseCase, completeTaskUseCase) as T
+            TaskViewModel(getTasksUseCase, addTaskUseCase, deleteTaskUseCase, completeTaskUseCase, updateTaskUseCase) as T
     }
 }
+
