@@ -8,8 +8,10 @@ import com.example.td.domain.usecase.AddTaskUseCase
 import com.example.td.domain.usecase.CompleteTaskUseCase
 import com.example.td.domain.usecase.DeleteTaskUseCase
 import com.example.td.domain.usecase.GetTasksUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -31,6 +33,13 @@ class TaskViewModel(
     val completedTasks: StateFlow<List<Task>> = allTasks
         .map { tasks -> tasks.filter { it.isCompleted } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _selectedTabIndex = MutableStateFlow(0)
+    val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
+
+    fun setSelectedTab(index: Int) {
+        _selectedTabIndex.value = index
+    }
 
     fun addTask(title: String, description: String = "") {
         if (title.isBlank()) return

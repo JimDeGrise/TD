@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -18,12 +20,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -65,96 +68,59 @@ private fun formatTimestamp(millis: Long): String = dateFormat.format(Date(milli
 fun TaskScreen(viewModel: TaskViewModel) {
     val activeTasks by viewModel.activeTasks.collectAsState()
     val completedTasks by viewModel.completedTasks.collectAsState()
+    val selectedTabIndex by viewModel.selectedTabIndex.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var selectedTask by remember { mutableStateOf<Task?>(null) }
+
+    val activeListState = rememberLazyListState()
+    val completedListState = rememberLazyListState()
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text(stringResource(R.string.app_name)) })
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_task))
+            if (selectedTabIndex == 0) {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_task))
+                }
             }
         }
     ) { padding ->
-        if (activeTasks.isEmpty() && completedTasks.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = stringResource(R.string.no_tasks),
-                    style = MaterialTheme.typography.bodyLarge
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { viewModel.setSelectedTab(0) },
+                    text = { Text(stringResource(R.string.tab_active)) }
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { viewModel.setSelectedTab(1) },
+                    text = { Text(stringResource(R.string.tab_completed)) }
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    Text(
-                        text = stringResource(R.string.active_tasks),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                }
-                if (activeTasks.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.no_active_tasks),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                } else {
-                    itemsIndexed(activeTasks, key = { _, task -> task.id }) { index, task ->
-                        TaskItem(
-                            task = task,
-                            cardColor = taskCardColors[index % taskCardColors.size],
-                            onDelete = null,
-                            onLongClick = { viewModel.completeTask(task) },
-                            onClick = { selectedTask = task }
-                        )
-                    }
-                }
-
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text(
-                        text = stringResource(R.string.completed_tasks),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                }
-                if (completedTasks.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.no_completed_tasks),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                } else {
-                    itemsIndexed(completedTasks, key = { _, task -> task.id }) { index, task ->
-                        TaskItem(
-                            task = task,
-                            cardColor = taskCardColors[index % taskCardColors.size],
-                            onDelete = { viewModel.deleteTask(task) },
-                            onLongClick = null,
-                            onClick = { selectedTask = task }
-                        )
-                    }
-                }
+            when (selectedTabIndex) {
+                0 -> TaskList(
+                    tasks = activeTasks,
+                    listState = activeListState,
+                    emptyText = stringResource(R.string.no_active_tasks),
+                    onLongClick = { viewModel.completeTask(it) },
+                    onDelete = null,
+                    onTaskClick = { selectedTask = it }
+                )
+                else -> TaskList(
+                    tasks = completedTasks,
+                    listState = completedListState,
+                    emptyText = stringResource(R.string.no_completed_tasks),
+                    onLongClick = null,
+                    onDelete = { viewModel.deleteTask(it) },
+                    onTaskClick = { selectedTask = it }
+                )
             }
         }
     }
@@ -171,6 +137,51 @@ fun TaskScreen(viewModel: TaskViewModel) {
 
     selectedTask?.let { task ->
         TaskDetailDialog(task = task, onDismiss = { selectedTask = null })
+    }
+}
+
+@Composable
+private fun TaskList(
+    tasks: List<Task>,
+    listState: LazyListState,
+    emptyText: String,
+    onLongClick: ((Task) -> Unit)?,
+    onDelete: ((Task) -> Unit)?,
+    onTaskClick: (Task) -> Unit
+) {
+    if (tasks.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = emptyText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
+        ) {
+            itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                TaskItem(
+                    task = task,
+                    cardColor = taskCardColors[index % taskCardColors.size],
+                    onDelete = if (onDelete != null) ({ onDelete(task) }) else null,
+                    onLongClick = if (onLongClick != null) ({ onLongClick(task) }) else null,
+                    onClick = { onTaskClick(task) }
+                )
+            }
+        }
     }
 }
 
@@ -316,3 +327,4 @@ private fun AddTaskDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> 
         }
     }
 }
+
