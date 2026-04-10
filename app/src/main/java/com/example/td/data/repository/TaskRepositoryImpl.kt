@@ -27,7 +27,8 @@ class TaskRepositoryImpl(private val dao: TaskDao) : TaskRepository {
         description = description,
         isCompleted = isCompleted,
         createdAt = createdAt,
-        completedAt = completedAt
+        completedAt = completedAt,
+        isStarred = isStarred
     )
 
     private fun Task.toEntity() = TaskEntity(
@@ -36,6 +37,7 @@ class TaskRepositoryImpl(private val dao: TaskDao) : TaskRepository {
         description = description,
         isCompleted = isCompleted,
         createdAt = createdAt,
-        completedAt = completedAt
+        completedAt = completedAt,
+        isStarred = isStarred
     )
 }
