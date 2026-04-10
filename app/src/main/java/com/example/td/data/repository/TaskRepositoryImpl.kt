@@ -15,10 +15,27 @@ class TaskRepositoryImpl(private val dao: TaskDao) : TaskRepository {
     override suspend fun addTask(task: Task) =
         dao.insertTask(task.toEntity())
 
+    override suspend fun updateTask(task: Task) =
+        dao.updateTask(task.toEntity())
+
     override suspend fun deleteTask(task: Task) =
         dao.deleteTask(task.toEntity())
 
-    private fun TaskEntity.toDomain() = Task(id = id, title = title, description = description, isCompleted = isCompleted, createdAt = createdAt)
+    private fun TaskEntity.toDomain() = Task(
+        id = id,
+        title = title,
+        description = description,
+        isCompleted = isCompleted,
+        createdAt = createdAt,
+        completedAt = completedAt
+    )
 
-    private fun Task.toEntity() = TaskEntity(id = id, title = title, description = description, isCompleted = isCompleted, createdAt = createdAt)
+    private fun Task.toEntity() = TaskEntity(
+        id = id,
+        title = title,
+        description = description,
+        isCompleted = isCompleted,
+        createdAt = createdAt,
+        completedAt = completedAt
+    )
 }

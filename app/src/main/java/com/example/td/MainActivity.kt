@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.td.data.local.database.AppDatabase
 import com.example.td.data.repository.TaskRepositoryImpl
 import com.example.td.domain.usecase.AddTaskUseCase
+import com.example.td.domain.usecase.CompleteTaskUseCase
 import com.example.td.domain.usecase.DeleteTaskUseCase
 import com.example.td.domain.usecase.GetTasksUseCase
 import com.example.td.ui.task.TaskScreen
@@ -24,7 +25,8 @@ class MainActivity : ComponentActivity() {
         val factory = TaskViewModel.Factory(
             GetTasksUseCase(repository),
             AddTaskUseCase(repository),
-            DeleteTaskUseCase(repository)
+            DeleteTaskUseCase(repository),
+            CompleteTaskUseCase(repository)
         )
 
         setContent {
