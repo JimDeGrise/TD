@@ -19,6 +19,7 @@ class DeleteTaskUseCaseTest {
         val fakeRepository = object : TaskRepository {
             override fun getTasks(): Flow<List<Task>> = error("not used")
             override suspend fun addTask(task: Task) = Unit
+            override suspend fun updateTask(task: Task) = Unit
             override suspend fun deleteTask(task: Task) { deletedTasks.add(task) }
         }
         useCase = DeleteTaskUseCase(fakeRepository)

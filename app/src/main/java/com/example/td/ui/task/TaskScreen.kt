@@ -1,8 +1,8 @@
 package com.example.td.ui.task
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,10 +37,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.td.R
 import com.example.td.domain.model.Task
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val taskCardColors = listOf(
     Color(0xFFE8F5E9), // sage green
@@ -50,10 +56,15 @@ private val taskCardColors = listOf(
     Color(0xFFFCE4EC)  // rose
 )
 
+private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+
+private fun formatTimestamp(millis: Long): String = dateFormat.format(Date(millis))
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskScreen(viewModel: TaskViewModel) {
-    val tasks by viewModel.tasks.collectAsState()
+    val activeTasks by viewModel.activeTasks.collectAsState()
+    val completedTasks by viewModel.completedTasks.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var selectedTask by remember { mutableStateOf<Task?>(null) }
 
@@ -67,7 +78,7 @@ fun TaskScreen(viewModel: TaskViewModel) {
             }
         }
     ) { padding ->
-        if (tasks.isEmpty()) {
+        if (activeTasks.isEmpty() && completedTasks.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -88,13 +99,61 @@ fun TaskScreen(viewModel: TaskViewModel) {
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
-                    TaskItem(
-                        task = task,
-                        cardColor = taskCardColors[index % taskCardColors.size],
-                        onDelete = { viewModel.deleteTask(task) },
-                        onClick = { selectedTask = task }
+                item {
+                    Text(
+                        text = stringResource(R.string.active_tasks),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
+                }
+                if (activeTasks.isEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.no_active_tasks),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                } else {
+                    itemsIndexed(activeTasks, key = { _, task -> task.id }) { index, task ->
+                        TaskItem(
+                            task = task,
+                            cardColor = taskCardColors[index % taskCardColors.size],
+                            onDelete = null,
+                            onLongClick = { viewModel.completeTask(task) },
+                            onClick = { selectedTask = task }
+                        )
+                    }
+                }
+
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text(
+                        text = stringResource(R.string.completed_tasks),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+                if (completedTasks.isEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.no_completed_tasks),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                } else {
+                    itemsIndexed(completedTasks, key = { _, task -> task.id }) { index, task ->
+                        TaskItem(
+                            task = task,
+                            cardColor = taskCardColors[index % taskCardColors.size],
+                            onDelete = { viewModel.deleteTask(task) },
+                            onLongClick = null,
+                            onClick = { selectedTask = task }
+                        )
+                    }
                 }
             }
         }
@@ -115,15 +174,24 @@ fun TaskScreen(viewModel: TaskViewModel) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TaskItem(task: Task, cardColor: Color, onDelete: () -> Unit, onClick: () -> Unit) {
+private fun TaskItem(
+    task: Task,
+    cardColor: Color,
+    onDelete: (() -> Unit)?,
+    onLongClick: (() -> Unit)?,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(
+            .combinedClickable(
                 onClickLabel = stringResource(R.string.view_description),
                 role = Role.Button,
-                onClick = onClick
+                onClick = onClick,
+                onLongClickLabel = if (onLongClick != null) stringResource(R.string.mark_as_done) else null,
+                onLongClick = onLongClick
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
@@ -135,16 +203,33 @@ private fun TaskItem(task: Task, cardColor: Color, onDelete: () -> Unit, onClick
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete_task)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                    )
                 )
+                Text(
+                    text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                task.completedAt?.let { completedAt ->
+                    Text(
+                        text = stringResource(R.string.completed_at, formatTimestamp(completedAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.delete_task)
+                    )
+                }
             }
         }
     }
@@ -156,10 +241,24 @@ private fun TaskDetailDialog(task: Task, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(task.title) },
         text = {
-            Text(
-                text = if (task.description.isNotBlank()) task.description
-                       else stringResource(R.string.no_description)
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = if (task.description.isNotBlank()) task.description
+                           else stringResource(R.string.no_description)
+                )
+                Text(
+                    text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                task.completedAt?.let { completedAt ->
+                    Text(
+                        text = stringResource(R.string.completed_at, formatTimestamp(completedAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {

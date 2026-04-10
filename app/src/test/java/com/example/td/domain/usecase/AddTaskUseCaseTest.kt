@@ -19,6 +19,7 @@ class AddTaskUseCaseTest {
         val fakeRepository = object : TaskRepository {
             override fun getTasks(): Flow<List<Task>> = error("not used")
             override suspend fun addTask(task: Task) { addedTasks.add(task) }
+            override suspend fun updateTask(task: Task) = Unit
             override suspend fun deleteTask(task: Task) = Unit
         }
         useCase = AddTaskUseCase(fakeRepository)
