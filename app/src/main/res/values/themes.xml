@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.TD" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.TD.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.TD</item>
+    </style>
+
 </resources>

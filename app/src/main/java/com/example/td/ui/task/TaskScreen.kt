@@ -1,0 +1,467 @@
+package com.example.td.ui.task
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.example.td.R
+import com.example.td.domain.model.Task
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
+
+private val taskCardColors = listOf(
+    Color(0xFFE8F5E9), // sage green
+    Color(0xFFE3F2FD), // steel blue
+    Color(0xFFF3E5F5), // lavender
+    Color(0xFFFFF3E0), // peach
+    Color(0xFFE0F7FA), // teal
+    Color(0xFFFCE4EC)  // rose
+)
+
+private val StarGold = Color(0xFFFFC107)
+
+private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+
+private fun formatTimestamp(millis: Long): String = dateFormat.format(Date(millis))
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TaskScreen(viewModel: TaskViewModel) {
+    val activeTasks by viewModel.activeTasks.collectAsState()
+    val completedTasks by viewModel.completedTasks.collectAsState()
+    val selectedTabIndex by viewModel.selectedTabIndex.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
+
+    val activeListState = rememberLazyListState()
+    val completedListState = rememberLazyListState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text(stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    shadow = Shadow(
+                        color = Color.Blue.copy(alpha = 0.5f), // Цвет тени (с прозрачностью)
+                        offset = Offset(4f, 4f),               // Смещение по X и Y
+                        blurRadius = 4f                        // Радиус размытия
+                    )
+                )
+            )
+
+            })
+        },
+        floatingActionButton = {
+            if (selectedTabIndex == 0) {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_task))
+                }
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { viewModel.setSelectedTab(0) },
+                    text = { Text(stringResource(R.string.tab_active),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                            shadow = Shadow(
+                                color = Color.Blue.copy(alpha = 0.5f), // Цвет тени (с прозрачностью)
+                                offset = Offset(4f, 4f),               // Смещение по X и Y
+                                blurRadius = 4f                        // Радиус размытия
+                            )
+                            )
+
+                    ) }
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { viewModel.setSelectedTab(1) },
+                    text = { Text(stringResource(R.string.tab_completed),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                            shadow = Shadow(
+                                color = Color.Blue.copy(alpha = 0.5f), // Цвет тени (с прозрачностью)
+                                offset = Offset(4f, 4f),               // Смещение по X и Y
+                                blurRadius = 4f                        // Радиус размытия
+                            )
+                            )
+                    ) }
+                )
+            }
+            when (selectedTabIndex) {
+                0 -> TaskList(
+                    tasks = activeTasks,
+                    listState = activeListState,
+                    emptyText = stringResource(R.string.no_active_tasks),
+                    onLongClick = { viewModel.completeTask(it) },
+                    onDelete = null,
+                    onDoubleTap = { viewModel.toggleStar(it) },
+                    onTaskClick = { selectedTask = it }
+                )
+                1 -> TaskList(
+                    tasks = completedTasks,
+                    listState = completedListState,
+                    emptyText = stringResource(R.string.no_completed_tasks),
+                    onLongClick = null,
+                    onDelete = { viewModel.deleteTask(it) },
+                    onDoubleTap = { viewModel.toggleStar(it) },
+                    onTaskClick = { selectedTask = it }
+                )
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddTaskDialog(
+            onConfirm = { title, description ->
+                viewModel.addTask(title, description)
+                showAddDialog = false
+            },
+            onDismiss = { showAddDialog = false }
+        )
+    }
+
+    selectedTask?.let { task ->
+        TaskDetailDialog(
+            task = task,
+            onDismiss = { selectedTask = null },
+            onSave = { updatedTask ->
+                viewModel.updateTask(updatedTask)
+                selectedTask = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun TaskList(
+    tasks: List<Task>,
+    listState: LazyListState,
+    emptyText: String,
+    onLongClick: ((Task) -> Unit)?,
+    onDelete: ((Task) -> Unit)?,
+    onDoubleTap: ((Task) -> Unit)?,
+    onTaskClick: (Task) -> Unit
+) {
+    if (tasks.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = emptyText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
+        ) {
+            itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                TaskItem(
+                    task = task,
+                    cardColor = taskCardColors[index % taskCardColors.size],
+                    onDelete = onDelete?.let { { it(task) } },
+                    onLongClick = onLongClick?.let { { it(task) } },
+                    onDoubleTap = onDoubleTap?.let { { it(task) } },
+                    onClick = { onTaskClick(task) }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TaskItem(
+    task: Task,
+    cardColor: Color,
+    onDelete: (() -> Unit)?,
+    onLongClick: (() -> Unit)?,
+    onDoubleTap: (() -> Unit)?,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClickLabel = stringResource(R.string.view_description),
+                role = Role.Button,
+                onClick = onClick,
+                onLongClickLabel = if (onLongClick != null) stringResource(R.string.mark_as_done) else null,
+                onLongClick = onLongClick,
+                onDoubleClick = onDoubleTap
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor)
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            shadow = Shadow(
+                            color = Color.Red.copy(alpha = 0.5f), // Цвет тени (с прозрачностью)
+                            offset = Offset(4f, 4f),               // Смещение по X и Y
+                            blurRadius = 10f                        // Радиус размытия
+                            )
+                        ),
+                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        )
+
+                    Text(
+                        text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    task.completedAt?.let { completedAt ->
+                        Text(
+                            text = stringResource(R.string.completed_at, formatTimestamp(completedAt)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (onDelete != null) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_task)
+                        )
+                    }
+                }
+            }
+            if (task.isStarred) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = stringResource(R.string.starred_task),
+                    tint = StarGold,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskDetailDialog(
+    task: Task,
+    onDismiss: () -> Unit,
+    onSave: (Task) -> Unit
+) {
+    var isEditing by rememberSaveable { mutableStateOf(false) }
+    var editTitle by rememberSaveable { mutableStateOf(task.title) }
+    var editDescription by rememberSaveable { mutableStateOf(task.description) }
+
+    fun resetEditState() {
+        isEditing = false
+        editTitle = task.title
+        editDescription = task.description
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (isEditing) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text(stringResource(R.string.task_title)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { isEditing = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.edit_task)
+                        )
+                    }
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isEditing) {
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text(stringResource(R.string.task_description)) },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text(
+                        text = if (task.description.isNotBlank()) task.description
+                               else stringResource(R.string.no_description)
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.created_at, formatTimestamp(task.createdAt)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                task.completedAt?.let { completedAt ->
+                    Text(
+                        text = stringResource(R.string.completed_at, formatTimestamp(completedAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (isEditing) {
+                TextButton(
+                    onClick = {
+                        onSave(task.copy(title = editTitle.trim(), description = editDescription.trim()))
+                    },
+                    enabled = editTitle.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        },
+        dismissButton = {
+            if (isEditing) {
+                TextButton(onClick = { resetEditState() }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun AddTaskDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.new_task),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.task_title)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text(stringResource(R.string.task_description)) },
+                    minLines = 2,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    TextButton(
+                        onClick = { onConfirm(title, description); title = ""; description = "" },
+                        enabled = title.isNotBlank()
+                    ) {
+                        Text(stringResource(R.string.add))
+                    }
+                }
+            }
+        }
+    }
+}
+

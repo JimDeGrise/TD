@@ -1,3 +1,26 @@
 <resources>
-    <string name="app_name">TD</string>
+    <string name="app_name">To-Do</string>
+    <string name="add_task">Добавить задачу</string>
+    <string name="delete_task">Удалить задачу</string>
+    <string name="no_tasks">Нет задач. Нажмите + чтобы добавить.</string>
+    <string name="new_task">Новая задача</string>
+    <string name="task_title">Название</string>
+    <string name="task_description">Описание (необязательно)</string>
+    <string name="cancel">Отмена</string>
+    <string name="add">Добавить</string>
+    <string name="close">Закрыть</string>
+    <string name="save">Сохранить</string>
+    <string name="edit_task">Редактировать задачу</string>
+    <string name="starred_task">Важная задача</string>
+    <string name="no_description">Описание не задано.</string>
+    <string name="view_description">Просмотреть описание</string>
+    <string name="active_tasks">Активные задачи</string>
+    <string name="completed_tasks">Выполненные задачи</string>
+    <string name="no_active_tasks">Нет активных задач.</string>
+    <string name="no_completed_tasks">Нет выполненных задач.</string>
+    <string name="created_at">Создано: %s</string>
+    <string name="completed_at">Завершено: %s</string>
+    <string name="mark_as_done">Отметить как выполненную</string>
+    <string name="tab_active">Активные</string>
+    <string name="tab_completed">Завершённые</string>
 </resources>
